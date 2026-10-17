@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import {
   Box,
@@ -10,12 +10,15 @@ import {
   Typography,
 } from '@mui/material';
 
+import { useNavigate } from 'react-router-dom';
+
 import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
 import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import ScheduleRoundedIcon from '@mui/icons-material/ScheduleRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 
 import logoUrl from '../assets/logo_no_background.svg';
 
@@ -26,11 +29,27 @@ const TEXT = '#303942';
 const MUTED = '#707A85';
 const BG = '#EEF1F4';
 
+const SETTINGS_KEY = import.meta.env.VITE_STORAGE_SECRET;
+
+const readSavedSettings = () => {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 const Home = () => {
+  const navigate = useNavigate();
+
+  const [savedSettings] = useState(() => readSavedSettings());
+
   const connected = true;
   const orthancConnected = true;
   const syncing = false;
-  const autoSync = true;
+  const autoSync = savedSettings?.autoSync ?? true;
 
   const version = import.meta.env.VITE_APP_VERSION || '1.0';
 
@@ -47,22 +66,27 @@ const Home = () => {
     syncDuration: '00:04',
 
     nextSync: '12:53',
-    syncInterval: '5 minutos',
+    syncInterval: `${savedSettings?.syncIntervalMinutes ?? 5} minutos`,
 
-    orthancAddress: '192.168.1.100:8042',
-    serverAddress: import.meta.env.VITE_API_URL,
+    orthancAddress: savedSettings?.orthancAddress || '192.168.1.100:8042',
+    serverAddress:
+      savedSettings?.serverUrl || import.meta.env.VITE_API_URL || '—',
   };
 
-  const storagePercent =
-    (stats.storage / stats.storageTotal) * 100;
+  const storagePercent = Math.min(
+    100,
+    (stats.storage / stats.storageTotal) * 100,
+  );
 
-  const storageFree =
-    stats.storageTotal - stats.storage;
+  const storageFree = stats.storageTotal - stats.storage;
 
   return (
     <>
       <GlobalStyles
         styles={{
+          '*, *::before, *::after': {
+            boxSizing: 'border-box',
+          },
           'html, body, #root': {
             margin: 0,
             padding: 0,
@@ -89,19 +113,20 @@ const Home = () => {
           fontFamily: '"Segoe UI", Arial, sans-serif',
         }}
       >
-
         {/* =========================================================
             HEADER
         ========================================================= */}
 
         <Box
           sx={{
-            height: 52,
-            minHeight: 52,
+            height: 56,
+            minHeight: 56,
+            flexShrink: 0,
 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: 1.5,
 
             px: 1.5,
 
@@ -110,26 +135,28 @@ const Home = () => {
             borderBottom: `1px solid ${BORDER}`,
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={1}>
+          {/* LEFT: LOGO + NOME */}
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{ minWidth: 0 }}
+          >
             <Box
               component="img"
               src={logoUrl}
               alt="Exami Sync"
               sx={{
-                width: 30,
-                height: 30,
-
-                bgcolor: BLUE,
-
-                borderRadius: '3px',
-
-                p: 0.4,
+                width: 40,
+                height: 40,
+                flexShrink: 0,
 
                 objectFit: 'contain',
+                display: 'block',
               }}
             />
 
-            <Stack direction="row" alignItems="baseline" spacing={0.8}>
+
               <Typography
                 sx={{
                   fontSize: 14,
@@ -137,6 +164,7 @@ const Home = () => {
                   lineHeight: 1,
                   color: TEXT,
                   letterSpacing: '0.5px',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 EXAMI
@@ -148,52 +176,51 @@ const Home = () => {
                   fontWeight: 500,
                   lineHeight: 1,
                   color: MUTED,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 Exami Sync
               </Typography>
             </Stack>
-          </Stack>
+                
+          
 
-          <Box
+          {/* RIGHT: CONFIG */}
+          <Button
+            onClick={() => navigate('/config')}
+            startIcon={<SettingsRoundedIcon sx={{ fontSize: 15 }} />}
             sx={{
               height: 26,
+              flexShrink: 0,
 
               px: 1,
 
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.6,
+              borderRadius: '3px',
 
-              border: `1px solid ${
-                connected ? '#A9D5BA' : '#E1B4B4'
-              }`,
+              border: `1px solid ${BORDER}`,
 
-              bgcolor: connected ? '#F1FAF4' : '#FFF5F5',
+              bgcolor: '#FFFFFF',
+
+              color: MUTED,
+
+              textTransform: 'uppercase',
+
+              fontSize: 9,
+              fontWeight: 700,
+
+              '& .MuiButton-startIcon': {
+                mr: 0.5,
+              },
+
+              '&:hover': {
+                bgcolor: '#F0F2F4',
+                borderColor: BLUE,
+                color: BLUE_DARK,
+              },
             }}
           >
-            <Box
-              sx={{
-                width: 7,
-                height: 7,
-
-                bgcolor: connected ? '#3CA66B' : '#C94C4C',
-
-                borderRadius: '50%',
-              }}
-            />
-
-            <Typography
-              sx={{
-                fontSize: 9.5,
-                fontWeight: 600,
-
-                color: connected ? '#287B4D' : '#A33A3A',
-              }}
-            >
-              {connected ? 'SERVIDOR ONLINE' : 'SERVIDOR OFFLINE'}
-            </Typography>
-          </Box>
+            Configurações
+          </Button>
         </Box>
 
         {/* =========================================================
@@ -210,34 +237,36 @@ const Home = () => {
 
             p: 1.2,
             gap: 1.2,
+
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}
         >
-
           {/* =======================================================
               CONEXÃO
           ======================================================= */}
 
           <Panel title="CONEXÃO">
-
             <Box
               sx={{
-                height: 72,
+                minHeight: 72,
+                flexShrink: 0,
 
                 display: 'flex',
                 alignItems: 'center',
 
                 px: 1.5,
+                py: 1,
+                gap: 1,
               }}
             >
-
               <ConnectionItem
                 icon={<StorageRoundedIcon />}
                 title="ORTHANC"
                 status={
-                  orthancConnected
-                    ? 'Conectado'
-                    : 'Desconectado'
+                  orthancConnected ? 'Conectado' : 'Desconectado'
                 }
+                connected={orthancConnected}
                 detail={stats.orthancAddress}
               />
 
@@ -246,11 +275,8 @@ const Home = () => {
               <ConnectionItem
                 icon={<CloudDoneRoundedIcon />}
                 title="EXAMI SERVER"
-                status={
-                  connected
-                    ? 'Conectado'
-                    : 'Desconectado'
-                }
+                status={connected ? 'Conectado' : 'Desconectado'}
+                connected={connected}
                 detail={stats.serverAddress}
               />
 
@@ -266,48 +292,43 @@ const Home = () => {
                       ? `${stats.pending} pendente(s)`
                       : 'Em dia'
                 }
+                connected={stats.pending === 0 && !syncing}
               />
-
             </Box>
           </Panel>
 
-
           {/* =======================================================
-              INFORMATION
+              INFORMATION (EXAMES + STORAGE)
           ======================================================= */}
 
           <Box
             sx={{
               flex: 1,
-              minHeight: 0,
+              minHeight: 140,
 
               display: 'grid',
 
-              gridTemplateColumns: '1.15fr 0.85fr',
+              gridTemplateColumns:
+                'minmax(0, 1.15fr) minmax(0, 0.85fr)',
 
               gap: 1.2,
             }}
           >
-
-            {/* =====================================================
-                EXAMES
-            ===================================================== */}
-
+            {/* EXAMES */}
             <Panel title="EXAMES">
-
               <Box
                 sx={{
-                  height: '100%',
+                  flex: 1,
+                  minHeight: 0,
 
                   display: 'grid',
 
                   gridTemplateColumns:
-                    'repeat(4, 1fr)',
+                    'repeat(4, minmax(0, 1fr))',
 
                   p: 1.2,
                 }}
               >
-
                 <InfoBlock
                   value={stats.received}
                   label="Recebidos"
@@ -329,20 +350,15 @@ const Home = () => {
                   label="Falhas"
                   danger={stats.failed > 0}
                 />
-
               </Box>
             </Panel>
 
-
-            {/* =====================================================
-                STORAGE
-            ===================================================== */}
-
+            {/* STORAGE */}
             <Panel title="ARMAZENAMENTO">
-
               <Box
                 sx={{
-                  height: '100%',
+                  flex: 1,
+                  minHeight: 0,
 
                   display: 'flex',
                   flexDirection: 'column',
@@ -350,25 +366,27 @@ const Home = () => {
                   justifyContent: 'center',
 
                   px: 1.5,
+                  py: 1,
                 }}
               >
-
                 <Stack
                   direction="row"
                   alignItems="baseline"
                   justifyContent="space-between"
-                  sx={{ mb: 0.8 }}
+                  sx={{ mb: 0.8, minWidth: 0 }}
                 >
                   <Typography
+                    component="div"
                     sx={{
                       fontSize: 14,
                       fontWeight: 600,
                       color: TEXT,
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {stats.storage.toLocaleString('pt-BR')} GB
 
-                    <Typography
+                    <Box
                       component="span"
                       sx={{
                         fontSize: 10,
@@ -378,7 +396,7 @@ const Home = () => {
                       }}
                     >
                       / {stats.storageTotal} GB
-                    </Typography>
+                    </Box>
                   </Typography>
 
                   <Typography
@@ -386,6 +404,8 @@ const Home = () => {
                       fontSize: 11,
                       fontWeight: 600,
                       color: BLUE_DARK,
+                      flexShrink: 0,
+                      ml: 1,
                     }}
                   >
                     {storagePercent.toFixed(0)}%
@@ -412,7 +432,7 @@ const Home = () => {
                 <Stack
                   direction="row"
                   justifyContent="space-between"
-                  sx={{ mt: 0.7 }}
+                  sx={{ mt: 0.7, minWidth: 0 }}
                 >
                   <Typography
                     sx={{
@@ -432,32 +452,28 @@ const Home = () => {
                     {storageFree.toLocaleString('pt-BR')} GB LIVRES
                   </Typography>
                 </Stack>
-
               </Box>
             </Panel>
-
           </Box>
 
-
           {/* =======================================================
-              SYNCHRONIZATION STATUS
+              SINCRONIZAÇÃO
           ======================================================= */}
 
           <Panel title="SINCRONIZAÇÃO">
-
             <Box
               sx={{
-                height: 52,
+                minHeight: 56,
+                flexShrink: 0,
 
                 display: 'grid',
 
                 gridTemplateColumns:
-                  '1.2fr 1fr 1fr 1fr',
+                  'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)',
 
                 alignItems: 'stretch',
               }}
             >
-
               <StatusCell
                 icon={<SyncRoundedIcon />}
                 label="STATUS"
@@ -468,7 +484,7 @@ const Home = () => {
                       ? 'Tudo sincronizado'
                       : 'Aguardando envio'
                 }
-                active={stats.pending === 0}
+                active={stats.pending === 0 && !syncing}
               />
 
               <StatusCell
@@ -503,39 +519,39 @@ const Home = () => {
                 }
                 danger={stats.failed > 0}
               />
-
             </Box>
-
           </Panel>
 
-
           {/* =======================================================
-              BOTTOM ACTION
+              AÇÃO INFERIOR
           ======================================================= */}
 
           <Panel>
-
             <Box
               sx={{
-                height: 42,
+                minHeight: 48,
+                flexShrink: 0,
 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: 1,
 
                 px: 1.2,
+                py: 0.8,
               }}
             >
-
               <Stack
                 direction="row"
                 alignItems="center"
                 spacing={0.7}
+                sx={{ minWidth: 0, overflow: 'hidden' }}
               >
                 <AccessTimeRoundedIcon
                   sx={{
                     fontSize: 16,
                     color: MUTED,
+                    flexShrink: 0,
                   }}
                 />
 
@@ -544,6 +560,7 @@ const Home = () => {
                     fontSize: 9.5,
                     color: MUTED,
                     letterSpacing: '0.4px',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   ÚLTIMA EXECUÇÃO:
@@ -554,6 +571,7 @@ const Home = () => {
                     fontSize: 9.5,
                     fontWeight: 600,
                     color: TEXT,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {stats.lastSync}
@@ -564,23 +582,22 @@ const Home = () => {
                     fontSize: 9,
                     color: '#9AA2AA',
                     ml: 0.5,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   • {stats.syncDuration}
                 </Typography>
               </Stack>
 
-
               <Button
                 variant="contained"
                 size="small"
                 startIcon={
-                  <SyncRoundedIcon
-                    sx={{ fontSize: 15 }}
-                  />
+                  <SyncRoundedIcon sx={{ fontSize: 15 }} />
                 }
                 sx={{
-                  height: 27,
+                  height: 28,
+                  flexShrink: 0,
 
                   px: 1.3,
 
@@ -595,6 +612,10 @@ const Home = () => {
                   fontSize: 9,
                   fontWeight: 700,
 
+                  '& .MuiButton-startIcon': {
+                    mr: 0.5,
+                  },
+
                   '&:hover': {
                     bgcolor: BLUE_DARK,
                     boxShadow: 'none',
@@ -603,13 +624,9 @@ const Home = () => {
               >
                 Sincronizar agora
               </Button>
-
             </Box>
-
           </Panel>
-
         </Box>
-
 
         {/* =========================================================
             FOOTER
@@ -619,34 +636,33 @@ const Home = () => {
           sx={{
             height: 26,
             minHeight: 26,
+            flexShrink: 0,
 
             px: 1.5,
 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: 1,
 
             bgcolor: '#E3E7EB',
 
             borderTop: `1px solid ${BORDER}`,
           }}
         >
-
           <Stack
             direction="row"
             alignItems="center"
             spacing={0.6}
+            sx={{ minWidth: 0, overflow: 'hidden' }}
           >
-
             <Box
               sx={{
                 width: 6,
                 height: 6,
+                flexShrink: 0,
 
-                bgcolor:
-                  autoSync
-                    ? '#3CA66B'
-                    : '#B0B7BE',
+                bgcolor: autoSync ? '#3CA66B' : '#B0B7BE',
 
                 borderRadius: '50%',
               }}
@@ -656,32 +672,32 @@ const Home = () => {
               sx={{
                 fontSize: 8.5,
                 color: '#59636E',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               Sincronização automática{' '}
               {autoSync ? 'ativa' : 'inativa'}
               {autoSync && ` • a cada ${stats.syncInterval}`}
             </Typography>
-
           </Stack>
-
 
           <Typography
             sx={{
               fontSize: 8.5,
               color: '#7A838D',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             Exami Sync {version}
           </Typography>
-
         </Box>
-
       </Box>
     </>
   );
 };
-
 
 /* ================================================================
    PANEL
@@ -693,10 +709,11 @@ const Panel = ({ title, children }) => {
       elevation={0}
       sx={{
         width: '100%',
-        height: '100%',
-
         minWidth: 0,
         minHeight: 0,
+
+        display: 'flex',
+        flexDirection: 'column',
 
         bgcolor: '#FFFFFF',
 
@@ -707,11 +724,12 @@ const Panel = ({ title, children }) => {
         overflow: 'hidden',
       }}
     >
-
       {title && (
         <Box
           sx={{
             height: 25,
+            minHeight: 25,
+            flexShrink: 0,
 
             px: 1,
 
@@ -723,7 +741,6 @@ const Panel = ({ title, children }) => {
             borderBottom: `1px solid ${BORDER}`,
           }}
         >
-
           <Typography
             sx={{
               fontSize: 8.5,
@@ -732,20 +749,18 @@ const Panel = ({ title, children }) => {
               letterSpacing: '0.6px',
 
               color: '#5E6873',
+              whiteSpace: 'nowrap',
             }}
           >
             {title}
           </Typography>
-
         </Box>
       )}
 
       {children}
-
     </Paper>
   );
 };
-
 
 /* ================================================================
    CONNECTION ITEM
@@ -756,46 +771,49 @@ const ConnectionItem = ({
   title,
   status,
   detail,
+  connected = true,
 }) => {
   return (
     <Box
       sx={{
-        width: 150,
+        flex: 1,
+        minWidth: 0,
+        maxWidth: 200,
 
         display: 'flex',
         flexDirection: 'column',
 
         alignItems: 'center',
+        justifyContent: 'center',
 
-        flexShrink: 0,
+        textAlign: 'center',
       }}
     >
-
       <Box
         sx={{
-          width: 30,
-          height: 30,
+          width: 32,
+          height: 32,
+          flexShrink: 0,
 
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
 
-          color: BLUE,
+          color: connected ? BLUE : '#B0B7BE',
 
-          border: `1px solid #BFD7ED`,
+          border: `1px solid ${
+            connected ? '#BFD7ED' : '#D5DADF'
+          }`,
 
-          bgcolor: '#F5F9FD',
+          bgcolor: connected ? '#F5F9FD' : '#F5F6F7',
 
           borderRadius: '2px',
         }}
       >
         {React.cloneElement(icon, {
-          sx: {
-            fontSize: 17,
-          },
+          sx: { fontSize: 18 },
         })}
       </Box>
-
 
       <Typography
         sx={{
@@ -805,25 +823,25 @@ const ConnectionItem = ({
           mt: 0.6,
 
           color: TEXT,
+          whiteSpace: 'nowrap',
         }}
       >
         {title}
       </Typography>
 
-
       <Stack
         direction="row"
         alignItems="center"
         spacing={0.4}
-        sx={{ mt: 0.15 }}
+        sx={{ mt: 0.15, minWidth: 0, maxWidth: '100%' }}
       >
-
         <Box
           sx={{
             width: 5,
             height: 5,
+            flexShrink: 0,
 
-            bgcolor: '#3CA66B',
+            bgcolor: connected ? '#3CA66B' : '#C94C4C',
 
             borderRadius: '50%',
           }}
@@ -832,14 +850,15 @@ const ConnectionItem = ({
         <Typography
           sx={{
             fontSize: 8,
-            color: '#4D8C69',
+            color: connected ? '#4D8C69' : '#A33A3A',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {status}
         </Typography>
-
       </Stack>
-
 
       {detail && (
         <Typography
@@ -847,23 +866,22 @@ const ConnectionItem = ({
             fontSize: 7.5,
             color: '#929AA2',
 
-            mt: 0.1,
+            mt: 0.2,
 
-            maxWidth: 150,
+            maxWidth: '100%',
 
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
+          title={detail}
         >
           {detail}
         </Typography>
       )}
-
     </Box>
   );
 };
-
 
 /* ================================================================
    CONNECTION LINE
@@ -873,13 +891,17 @@ const ConnectionLine = () => {
   return (
     <Box
       sx={{
-        flex: 1,
+        flex: '0 0 30px',
+        minWidth: 20,
+        maxWidth: 60,
 
         height: 1,
 
         bgcolor: '#CBD2D9',
 
         position: 'relative',
+
+        alignSelf: 'center',
 
         '&::after': {
           content: '""',
@@ -893,17 +915,14 @@ const ConnectionLine = () => {
           height: 5,
 
           borderTop: '1px solid #AAB3BD',
-
           borderRight: '1px solid #AAB3BD',
 
-          transform:
-            'translateY(-50%) rotate(45deg)',
+          transform: 'translateY(-50%) rotate(45deg)',
         },
       }}
     />
   );
 };
-
 
 /* ================================================================
    INFO BLOCK
@@ -918,40 +937,41 @@ const InfoBlock = ({
   return (
     <Box
       sx={{
+        minWidth: 0,
+
         display: 'flex',
         flexDirection: 'column',
 
         justifyContent: 'center',
+        alignItems: 'center',
 
-        px: 1.5,
+        textAlign: 'center',
 
-        borderRight:
-          `1px solid ${BORDER}`,
+        px: 1,
+
+        borderRight: `1px solid ${BORDER}`,
 
         '&:last-child': {
           borderRight: 'none',
         },
       }}
     >
-
       <Typography
         sx={{
-          fontSize: 27,
+          fontSize: 26,
           fontWeight: 500,
 
           lineHeight: 1,
 
-          color:
-            danger
-              ? '#C94C4C'
-              : warning
-                ? '#C58A2C'
-                : BLUE_DARK,
+          color: danger
+            ? '#C94C4C'
+            : warning
+              ? '#C58A2C'
+              : BLUE_DARK,
         }}
       >
         {value}
       </Typography>
-
 
       <Typography
         sx={{
@@ -961,15 +981,18 @@ const InfoBlock = ({
           mt: 0.6,
 
           textTransform: 'uppercase',
+
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: '100%',
         }}
       >
         {label}
       </Typography>
-
     </Box>
   );
 };
-
 
 /* ================================================================
    STATUS CELL
@@ -986,24 +1009,26 @@ const StatusCell = ({
   return (
     <Box
       sx={{
+        minWidth: 0,
+
         display: 'flex',
         alignItems: 'center',
 
         px: 1.2,
+        py: 0.8,
 
-        borderRight:
-          `1px solid ${BORDER}`,
+        borderRight: `1px solid ${BORDER}`,
 
         '&:last-child': {
           borderRight: 'none',
         },
       }}
     >
-
       <Box
         sx={{
           width: 26,
           height: 26,
+          flexShrink: 0,
 
           mr: 0.9,
 
@@ -1011,48 +1036,35 @@ const StatusCell = ({
           alignItems: 'center',
           justifyContent: 'center',
 
-          bgcolor:
-            danger
-              ? '#FFF5F5'
-              : active
-                ? '#F1FAF4'
-                : '#F5F9FD',
+          bgcolor: danger
+            ? '#FFF5F5'
+            : active
+              ? '#F1FAF4'
+              : '#F5F9FD',
 
-          color:
-            danger
-              ? '#C94C4C'
-              : active
-                ? '#3CA66B'
-                : BLUE,
+          color: danger
+            ? '#C94C4C'
+            : active
+              ? '#3CA66B'
+              : BLUE,
 
-          border:
-            `1px solid ${
-              danger
-                ? '#E7C1C1'
-                : active
-                  ? '#B9D9C5'
-                  : '#C9DDF0'
-            }`,
+          border: `1px solid ${
+            danger
+              ? '#E7C1C1'
+              : active
+                ? '#B9D9C5'
+                : '#C9DDF0'
+          }`,
 
           borderRadius: '2px',
-
-          flexShrink: 0,
         }}
       >
         {React.cloneElement(icon, {
-          sx: {
-            fontSize: 15,
-          },
+          sx: { fontSize: 15 },
         })}
       </Box>
 
-
-      <Box
-        sx={{
-          minWidth: 0,
-        }}
-      >
-
+      <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography
           sx={{
             fontSize: 7.5,
@@ -1063,21 +1075,19 @@ const StatusCell = ({
             letterSpacing: '0.4px',
 
             whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {label}
         </Typography>
-
 
         <Typography
           sx={{
             fontSize: 9.5,
             fontWeight: 600,
 
-            color:
-              danger
-                ? '#A33A3A'
-                : TEXT,
+            color: danger ? '#A33A3A' : TEXT,
 
             mt: 0.15,
 
@@ -1085,10 +1095,10 @@ const StatusCell = ({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }}
+          title={value}
         >
           {value}
         </Typography>
-
 
         {detail && (
           <Typography
@@ -1097,14 +1107,15 @@ const StatusCell = ({
               color: MUTED,
 
               whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
+            title={detail}
           >
             {detail}
           </Typography>
         )}
-
       </Box>
-
     </Box>
   );
 };
